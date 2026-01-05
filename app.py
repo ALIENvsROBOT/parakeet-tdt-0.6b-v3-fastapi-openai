@@ -13,6 +13,7 @@ import uuid
 import subprocess
 import datetime
 import psutil
+from typing import List, Tuple
 from werkzeug.utils import secure_filename
 
 import flask
@@ -114,7 +115,7 @@ def get_audio_duration(file_path: str) -> float:
         return 0.0
 
 
-def detect_silence_points(file_path: str, silence_thresh: str = "-40dB", silence_duration: float = 0.5) -> list:
+def detect_silence_points(file_path: str, silence_thresh: str = "-40dB", silence_duration: float = 0.5) -> List[Tuple[float, float]]:
     """
     Detect silence points in audio file using ffmpeg's silencedetect filter.
     
@@ -161,7 +162,7 @@ def detect_silence_points(file_path: str, silence_thresh: str = "-40dB", silence
 
 
 def find_optimal_split_points(total_duration: float, target_chunk_duration: float, 
-                               silence_points: list, search_window: float = 30.0) -> list:
+                               silence_points: List[Tuple[float, float]], search_window: float = 30.0) -> List[float]:
     """
     Find optimal split points based on silence detection.
     
@@ -185,10 +186,10 @@ def find_optimal_split_points(total_duration: float, target_chunk_duration: floa
         search_start = max(0, target_time - search_window)
         search_end = min(total_duration, target_time + search_window)
         
-        # Find silence points within the search window
+        # Find silence points that overlap with the search window
         candidate_silences = [
             (start, end) for start, end in silence_points
-            if search_start <= start <= search_end or search_start <= end <= search_end
+            if max(start, search_start) <= min(end, search_end)
         ]
         
         if candidate_silences:
