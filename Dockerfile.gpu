@@ -1,7 +1,7 @@
 # Parakeet TDT 0.6B ONNX - GPU Dockerfile
 # High-performance speech transcription with NVIDIA CUDA
 
-FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04
 
 # Build arguments for metadata
 ARG BUILD_DATE
