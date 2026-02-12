@@ -65,7 +65,6 @@ jobs:
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest
           labels: |
             org.opencontainers.image.title=Parakeet TDT Speech Recognition (${{ matrix.variant }})
