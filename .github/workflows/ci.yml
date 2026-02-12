@@ -137,3 +137,12 @@ jobs:
           fi
           echo "✅ All CI checks passed!"
           echo "🎉 Ready for deployment"
+
+  trigger-cd:
+    name: Trigger CD Pipeline
+    needs: [all-checks-passed]
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit

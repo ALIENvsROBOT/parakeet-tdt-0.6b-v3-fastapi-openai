@@ -1,19 +1,17 @@
 name: CD - Docker Build and Publish
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
-  workflow_run:
-    workflows: ["CI - Tests and Quality Checks"]
-    branches: [main]
-    types:
-      - completed
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Version tag (e.g., v3.0.2)'
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version tag (e.g., v3.1.0)'
-        required: false
+      tag:
+        description: 'Version tag (e.g., v3.0.2)'
+        required: true
         type: string
 
 env:
@@ -21,28 +19,8 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Wait for CI to complete if this is a tag push
-  wait-for-ci:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Wait for CI workflow to complete
-        uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref: ${{ github.sha }}
-          check-name: 'All CI Checks Passed'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
-
   build-and-push:
     runs-on: ubuntu-latest
-    needs: [wait-for-ci]
-    if: |
-      always() &&
-      (needs.wait-for-ci.result == 'success' || needs.wait-for-ci.result == 'skipped') &&
-      (github.event_name == 'workflow_dispatch' ||
-       github.event_name == 'push' ||
-       github.event.workflow_run.conclusion == 'success')
     permissions:
       contents: read
       packages: write
@@ -56,20 +34,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Detect tag from workflow_run or direct trigger
-        id: tag-info
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # Get tag from workflow_run event
-            TAG="${{ github.event.workflow_run.head_branch }}"
-          else
-            # Get tag from direct push event
-            TAG="${GITHUB_REF#refs/tags/}"
-          fi
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "is_tag=${{ startsWith(github.event.workflow_run.head_branch || github.ref, 'v') || startsWith(github.ref, 'refs/tags/v') }}" >> $GITHUB_OUTPUT
-          echo "Detected tag: $TAG"
+        with:
+          ref: ${{ inputs.tag }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -92,8 +58,8 @@ jobs:
           flavor: |
             suffix=-${{ matrix.variant }},onlatest=true
           tags: |
-            type=raw,value=${{ steps.tag-info.outputs.tag }},enable=${{ steps.tag-info.outputs.is_tag == 'true' }}
-            type=raw,value=latest,enable=${{ steps.tag-info.outputs.is_tag == 'true' }}
+            type=raw,value=${{ inputs.tag }}
+            type=raw,value=latest
           labels: |
             org.opencontainers.image.title=Parakeet TDT Speech Recognition (${{ matrix.variant }})
             org.opencontainers.image.description=High-performance ONNX-optimized speech transcription service (${{ matrix.variant }})
