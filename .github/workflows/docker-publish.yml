@@ -57,6 +57,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Detect tag from workflow_run or direct trigger
+        id: tag-info
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            # Get tag from workflow_run event
+            TAG="${{ github.event.workflow_run.head_branch }}"
+          else
+            # Get tag from direct push event
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "is_tag=${{ startsWith(github.event.workflow_run.head_branch || github.ref, 'v') || startsWith(github.ref, 'refs/tags/v') }}" >> $GITHUB_OUTPUT
+          echo "Detected tag: $TAG"
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -78,8 +92,8 @@ jobs:
           flavor: |
             suffix=-${{ matrix.variant }},onlatest=true
           tags: |
-            type=semver,pattern=v{{version}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=${{ steps.tag-info.outputs.tag }},enable=${{ steps.tag-info.outputs.is_tag == 'true' }}
+            type=raw,value=latest,enable=${{ steps.tag-info.outputs.is_tag == 'true' }}
           labels: |
             org.opencontainers.image.title=Parakeet TDT Speech Recognition (${{ matrix.variant }})
             org.opencontainers.image.description=High-performance ONNX-optimized speech transcription service (${{ matrix.variant }})
