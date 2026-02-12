@@ -78,9 +78,8 @@ jobs:
           flavor: |
             suffix=-${{ matrix.variant }},onlatest=true
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=raw,value=latest
+            type=semver,pattern=v{{version}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
           labels: |
             org.opencontainers.image.title=Parakeet TDT Speech Recognition (${{ matrix.variant }})
             org.opencontainers.image.description=High-performance ONNX-optimized speech transcription service (${{ matrix.variant }})
