@@ -35,7 +35,7 @@ docker compose up parakeet-cuda-gpu -d
 
 **Best for:** AMD GPUs (Radeon RX, Instinct)
 
-- **Base Image:** `rocm/pytorch:rocm6.2.4_ubuntu22.04_py3.10_pytorch_release_2.3.0`
+- **Base Image:** `rocm/pytorch:rocm6.2_ubuntu22.04_py3.10_pytorch_release_2.3.0` (10+ GB)
 - **Runtime:** ONNX Runtime with ROCmExecutionProvider
 - **Requirements:**
   - AMD GPU with ROCm support (RDNA 2+, CDNA)
@@ -46,11 +46,22 @@ docker compose up parakeet-cuda-gpu -d
 - ⚠️ Windows with WSL2 (experimental, requires ROCm on Linux)
 - ❌ macOS
 
-**Docker Run:**
+**⚠️ Build Locally (Not in Registry):**
+
+Due to the large base image size (10+ GB), ROCm builds exceed GitHub Actions runner disk space and are not included in automated releases.
+
+**Build locally:**
+```bash
+git clone https://github.com/ALIENvsROBOT/parakeet-tdt-0.6b-v3-fastapi-openai
+cd parakeet-tdt-0.6b-v3-fastapi-openai
+docker build -f Dockerfile.rocm-gpu -t parakeet-tdt:rocm-gpu .
+```
+
+**Run:**
 ```bash
 docker run -d -p 5092:5092 \
   --device=/dev/kfd --device=/dev/dri \
-  ghcr.io/alienvsrobot/parakeet-tdt-0.6b-v3-fastapi-openai:latest-rocm-gpu
+  parakeet-tdt:rocm-gpu
 ```
 
 **Docker Compose:**

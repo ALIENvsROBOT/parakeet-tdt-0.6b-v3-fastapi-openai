@@ -29,7 +29,9 @@ jobs:
 
     strategy:
       matrix:
-        variant: [cpu, cuda-gpu, rocm-gpu]
+        variant: [cpu, cuda-gpu]
+        # Note: rocm-gpu excluded due to 10+ GB base image size (exceeds GitHub runner disk space)
+        # Build locally: docker build -f Dockerfile.rocm-gpu -t parakeet-tdt:rocm-gpu .
 
     steps:
       - name: Checkout repository
@@ -107,7 +109,7 @@ jobs:
           body: |
             ## Docker Images
 
-            This release includes CPU and GPU-optimized Docker images with auto-detection:
+            This release includes CPU and NVIDIA GPU-optimized Docker images with auto-detection:
 
             ### Pull Images
             ```bash
@@ -116,9 +118,6 @@ jobs:
 
             # NVIDIA CUDA GPU version (requires NVIDIA GPU + Container Toolkit)
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cuda-gpu
-
-            # AMD ROCm GPU version (requires AMD GPU + ROCm drivers)
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-rocm-gpu
             ```
 
             ### Quick Start
@@ -128,10 +127,13 @@ jobs:
 
             # NVIDIA GPU (Linux/WSL2 only)
             docker run -d -p 5092:5092 --gpus all ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cuda-gpu
+            ```
 
-            # AMD GPU (Linux only)
-            docker run -d -p 5092:5092 --device=/dev/kfd --device=/dev/dri \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-rocm-gpu
+            ### AMD ROCm GPU Support
+            **Build locally** (10+ GB base image - too large for CI/CD):
+            ```bash
+            docker build -f Dockerfile.rocm-gpu -t parakeet-tdt:rocm-gpu .
+            docker run -d -p 5092:5092 --device=/dev/kfd --device=/dev/dri parakeet-tdt:rocm-gpu
             ```
 
             ### Mac Users
