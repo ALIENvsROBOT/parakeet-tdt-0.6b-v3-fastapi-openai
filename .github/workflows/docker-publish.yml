@@ -66,9 +66,7 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
             type=raw,value=latest
-            type=sha,prefix={{branch}}-
           labels: |
             org.opencontainers.image.title=Parakeet TDT Speech Recognition (${{ matrix.variant }})
             org.opencontainers.image.description=High-performance ONNX-optimized speech transcription service (${{ matrix.variant }})
