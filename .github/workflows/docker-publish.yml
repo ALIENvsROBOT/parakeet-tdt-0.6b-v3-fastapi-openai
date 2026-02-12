@@ -102,6 +102,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set lowercase repository name
+        id: repo
+        run: echo "lowercase=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -114,19 +118,19 @@ jobs:
             ### Pull Images
             ```bash
             # CPU version (compatible with all systems including Mac)
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cpu
+            docker pull ${{ env.REGISTRY }}/${{ steps.repo.outputs.lowercase }}:${{ github.ref_name }}-cpu
 
             # NVIDIA CUDA GPU version (requires NVIDIA GPU + Container Toolkit)
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cuda-gpu
+            docker pull ${{ env.REGISTRY }}/${{ steps.repo.outputs.lowercase }}:${{ github.ref_name }}-cuda-gpu
             ```
 
             ### Quick Start
             ```bash
             # CPU (works on all platforms)
-            docker run -d -p 5092:5092 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cpu
+            docker run -d -p 5092:5092 ${{ env.REGISTRY }}/${{ steps.repo.outputs.lowercase }}:${{ github.ref_name }}-cpu
 
             # NVIDIA GPU (Linux/WSL2 only)
-            docker run -d -p 5092:5092 --gpus all ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cuda-gpu
+            docker run -d -p 5092:5092 --gpus all ${{ env.REGISTRY }}/${{ steps.repo.outputs.lowercase }}:${{ github.ref_name }}-cuda-gpu
             ```
 
             ### AMD ROCm GPU Support
