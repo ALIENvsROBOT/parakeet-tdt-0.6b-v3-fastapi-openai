@@ -12,6 +12,10 @@ services:
       - "5092:5092"
     volumes:
       - parakeet-models:/app/models
+    environment:
+      # Optional: Set API_KEY for authentication (recommended for production)
+      # - API_KEY=your-secret-api-key-here
+      - PYTHONUNBUFFERED=1
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5092/health')" ]
@@ -31,6 +35,10 @@ services:
       - "5092:5092"
     volumes:
       - parakeet-models:/app/models
+    environment:
+      # Optional: Set API_KEY for authentication (recommended for production)
+      # - API_KEY=your-secret-api-key-here
+      - PYTHONUNBUFFERED=1
     restart: unless-stopped
     deploy:
       resources:

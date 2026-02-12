@@ -1,0 +1,136 @@
+name: CD - Docker Build and Publish
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_run:
+    workflows: ["CI - Tests and Quality Checks"]
+    branches: [main]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v3.1.0)'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    # Only run if CI passed or if triggered by tag/manual dispatch
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        variant: [cpu, gpu]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            suffix=-${{ matrix.variant }},onlatest=true
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+            type=sha,prefix={{branch}}-
+          labels: |
+            org.opencontainers.image.title=Parakeet TDT Speech Recognition (${{ matrix.variant }})
+            org.opencontainers.image.description=High-performance ONNX-optimized speech transcription service (${{ matrix.variant }})
+            org.opencontainers.image.vendor=Parakeet TDT
+            variant=${{ matrix.variant }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.${{ matrix.variant }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.meta.outputs.digest }}
+          push-to-registry: true
+
+  create-release:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          body: |
+            ## Docker Images
+
+            This release includes both CPU and GPU-optimized Docker images:
+
+            ### Pull Images
+            ```bash
+            # CPU version
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cpu
+
+            # GPU version (requires NVIDIA GPU + Container Toolkit)
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-gpu
+            ```
+
+            ### Quick Start
+            ```bash
+            # CPU
+            docker run -d -p 5092:5092 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cpu
+
+            # GPU
+            docker run -d -p 5092:5092 --gpus all ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-gpu
+            ```
+
+            See [documentation](https://github.com/${{ github.repository }}/tree/main/docs) for more details.

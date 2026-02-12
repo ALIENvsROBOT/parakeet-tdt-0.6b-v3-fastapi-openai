@@ -3,6 +3,11 @@ port = 5092
 threads = 8  # Optimized for 8 P-cores
 CHUNK_MINUTE = 1.5  # Target 90-second chunks with intelligent silence-based splitting
 
+# API Key Configuration (optional)
+# Set API_KEY environment variable to require authentication
+# If not set, API is open (no authentication required)
+API_KEY = None  # Will be loaded from environment variable
+
 # Intelligent chunking configuration
 SILENCE_THRESHOLD = "-40dB"  # Silence detection threshold
 SILENCE_MIN_DURATION = 0.5  # Minimum silence duration in seconds
@@ -34,6 +39,13 @@ os.environ["HF_HUB_CACHE"] = ROOT_DIR + "/models"
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "true"
 if sys.platform == "win32":
     os.environ["PATH"] = ROOT_DIR + f";{ROOT_DIR}/ffmpeg;" + os.environ["PATH"]
+
+# Load API key from environment variable (optional authentication)
+API_KEY = os.environ.get("API_KEY", None)
+if API_KEY:
+    print(f"🔐 API Key authentication enabled")
+else:
+    print(f"⚠️  API Key authentication disabled (set API_KEY env var to enable)")
 
 
 try:
@@ -101,6 +113,19 @@ app.config["MAX_CONTENT_LENGTH"] = 2000 * 1024 * 1024
 
 # Progress tracking
 progress_tracker = {}
+
+
+def check_api_key():
+    """Check if API key is valid (if authentication is enabled)"""
+    if not API_KEY:
+        return True  # Authentication disabled
+
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        provided_key = auth_header[7:]
+        return provided_key == API_KEY
+
+    return False
 
 
 def get_audio_duration(file_path: str) -> float:
@@ -425,6 +450,16 @@ def get_metrics():
 
 @app.route("/v1/audio/transcriptions", methods=["POST"])
 def transcribe_audio():
+    # Check API key authentication (if enabled)
+    if not check_api_key():
+        return jsonify({
+            "error": {
+                "message": "Invalid API key",
+                "type": "invalid_request_error",
+                "code": "invalid_api_key"
+            }
+        }), 401
+
     if "file" not in request.files:
         return jsonify({"error": "No file part in the request"}), 400
     file = request.files["file"]

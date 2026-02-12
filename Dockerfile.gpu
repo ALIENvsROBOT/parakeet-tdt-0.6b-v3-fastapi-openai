@@ -3,8 +3,22 @@
 
 FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
+# Build arguments for metadata
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION=dev
+
+# Metadata labels
 LABEL maintainer="Parakeet TDT"
 LABEL description="ONNX-optimized speech transcription service (GPU/CUDA)"
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.source="https://github.com/ALIENvsROBOT/parakeet-tdt-0.6b-v3-fastapi-openai"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.revision="${VCS_REF}"
+LABEL org.opencontainers.image.vendor="Parakeet TDT"
+LABEL org.opencontainers.image.title="Parakeet TDT GPU"
+LABEL org.opencontainers.image.description="High-performance ONNX-optimized speech transcription service (GPU/CUDA)"
+LABEL variant="gpu"
 
 # Prevent interactive prompts during build
 ENV DEBIAN_FRONTEND=noninteractive

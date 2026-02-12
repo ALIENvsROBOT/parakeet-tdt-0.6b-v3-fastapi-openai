@@ -69,7 +69,9 @@ docker compose up parakeet-cpu -d
 docker compose up parakeet-gpu -d
 ```
 
-The server will be available at `http://localhost:5092`. See [DOCKER.md](DOCKER.md) for more options.
+The server will be available at `http://localhost:5092`. See [DOCKER.md](docs/DOCKER.md) for more options.
+
+**📚 Full Documentation**: See [docs/](docs/) for complete deployment guides, environment variables, and production setup.
 
 ---
 
