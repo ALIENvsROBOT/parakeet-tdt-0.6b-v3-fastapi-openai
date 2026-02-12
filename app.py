@@ -56,15 +56,13 @@ try:
     # Try GPU providers first
     available_providers = ort.get_available_providers()
     print(f"Available providers: {available_providers}")
-    
-    # Priority: Tensorrt, CUDA, CPU
+
+    # Priority: CUDA, CPU (skip TensorRT - requires additional libraries)
     providers_to_try = []
-    if "TensorrtExecutionProvider" in available_providers:
-        providers_to_try.append("TensorrtExecutionProvider")
     if "CUDAExecutionProvider" in available_providers:
         providers_to_try.append("CUDAExecutionProvider")
     providers_to_try.append("CPUExecutionProvider")
-    
+
     print(f"Using providers: {providers_to_try}")
 
     # Configure session options
