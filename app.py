@@ -53,24 +53,47 @@ try:
     import onnx_asr
 
     import onnxruntime as ort
-    # Try GPU providers first
-    available_providers = ort.get_available_providers()
-    print(f"Available providers: {available_providers}")
 
-    # Priority: CUDA, CPU (skip TensorRT - requires additional libraries)
+    # Detect available providers
+    available_providers = ort.get_available_providers()
+    print(f"🔍 Available ONNX Runtime providers: {available_providers}")
+
+    # Priority: ROCm (AMD GPU) → CUDA (NVIDIA GPU) → CPU
+    # Auto-detect which GPU provider is available
     providers_to_try = []
-    if "CUDAExecutionProvider" in available_providers:
+    gpu_detected = None
+
+    if "ROCmExecutionProvider" in available_providers:
+        providers_to_try.append("ROCmExecutionProvider")
+        gpu_detected = "AMD ROCm"
+        print("🎮 AMD GPU detected - using ROCm acceleration")
+    elif "CUDAExecutionProvider" in available_providers:
         providers_to_try.append("CUDAExecutionProvider")
+        gpu_detected = "NVIDIA CUDA"
+        print("🎮 NVIDIA GPU detected - using CUDA acceleration")
+    else:
+        print("💻 No GPU detected - using CPU")
+
+    # Always include CPU as fallback
     providers_to_try.append("CPUExecutionProvider")
 
-    print(f"Using providers: {providers_to_try}")
+    print(f"🚀 Provider priority: {' → '.join(providers_to_try)}")
 
     # Configure session options
     sess_options = ort.SessionOptions()
-    if "CPUExecutionProvider" in providers_to_try[0]:
+
+    # Optimize based on primary provider
+    if gpu_detected:
+        # GPU mode: minimal CPU threading
+        sess_options.intra_op_num_threads = 1
+        sess_options.inter_op_num_threads = 1
+    else:
+        # CPU mode: optimize for multi-core (8 P-cores)
         sess_options.intra_op_num_threads = 8
         sess_options.inter_op_num_threads = 1
-    
+        sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+
     asr_model = onnx_asr.load_model(
         "nemo-parakeet-tdt-0.6b-v3",
         quantization="int8",
@@ -78,22 +101,11 @@ try:
         sess_options=sess_options,
     ).with_timestamps()
 
-    print(f"Available providers: {ort.get_available_providers()}")
+    if gpu_detected:
+        print(f"✅ Model loaded successfully with {gpu_detected} acceleration!")
+    else:
+        print("✅ Model loaded successfully with CPU optimization (10.6x real-time speedup)!")
 
-    # Configure session options for optimal CPU performance
-    sess_options = ort.SessionOptions()
-    sess_options.intra_op_num_threads = 4  # Match Waitress threads
-    sess_options.inter_op_num_threads = 1
-    sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-    sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-
-    asr_model = onnx_asr.load_model(
-        "nemo-parakeet-tdt-0.6b-v3",
-        quantization="int8",
-        providers=["CPUExecutionProvider"],
-        sess_options=sess_options,
-    ).with_timestamps()
-    print("Model loaded successfully with CPU optimization (10.6x real-time speedup)!")
 except Exception as e:
     print(f"❌ Model loading failed: {e}")
     import traceback

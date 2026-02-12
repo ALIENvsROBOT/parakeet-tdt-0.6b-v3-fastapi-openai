@@ -29,7 +29,7 @@ jobs:
 
     strategy:
       matrix:
-        variant: [cpu, gpu]
+        variant: [cpu, cuda-gpu, rocm-gpu]
 
     steps:
       - name: Checkout repository
@@ -107,24 +107,34 @@ jobs:
           body: |
             ## Docker Images
 
-            This release includes both CPU and GPU-optimized Docker images:
+            This release includes CPU and GPU-optimized Docker images with auto-detection:
 
             ### Pull Images
             ```bash
-            # CPU version
+            # CPU version (compatible with all systems including Mac)
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cpu
 
-            # GPU version (requires NVIDIA GPU + Container Toolkit)
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-gpu
+            # NVIDIA CUDA GPU version (requires NVIDIA GPU + Container Toolkit)
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cuda-gpu
+
+            # AMD ROCm GPU version (requires AMD GPU + ROCm drivers)
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-rocm-gpu
             ```
 
             ### Quick Start
             ```bash
-            # CPU
+            # CPU (works on all platforms)
             docker run -d -p 5092:5092 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cpu
 
-            # GPU
-            docker run -d -p 5092:5092 --gpus all ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-gpu
+            # NVIDIA GPU (Linux/WSL2 only)
+            docker run -d -p 5092:5092 --gpus all ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-cuda-gpu
+
+            # AMD GPU (Linux only)
+            docker run -d -p 5092:5092 --device=/dev/kfd --device=/dev/dri \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-rocm-gpu
             ```
+
+            ### Mac Users
+            **Note:** Docker on Mac does not support GPU acceleration. Mac users should use the CPU version, which provides excellent performance (10.6x real-time speedup) with INT8 quantization.
 
             See [documentation](https://github.com/${{ github.repository }}/tree/main/docs) for more details.

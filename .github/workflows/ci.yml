@@ -77,7 +77,7 @@ jobs:
     needs: test
     strategy:
       matrix:
-        variant: [cpu]  # Only test CPU build in CI (GPU requires special runners)
+        variant: [cpu]  # Only test CPU build in CI (GPU builds require special hardware)
 
     steps:
       - name: Checkout code

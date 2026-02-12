@@ -57,21 +57,28 @@ For hybrid CPUs (like Intel 12th-14th Gen), performance is significantly improve
 
 The easiest way to get started. No dependencies to install!
 
-**CPU Deployment:**
+**CPU Deployment (works on all platforms including Mac):**
 ```bash
 git clone https://github.com/groxaxo/parakeet-tdt-0.6b-v3-fastapi-openai
 cd parakeet-tdt-0.6b-v3-fastapi-openai
 docker compose up parakeet-cpu -d
 ```
 
-**GPU Deployment** (requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)):
+**GPU Deployment:**
 ```bash
-docker compose up parakeet-gpu -d
+# NVIDIA CUDA GPU (requires NVIDIA Container Toolkit)
+docker compose up parakeet-cuda-gpu -d
+
+# AMD ROCm GPU (requires ROCm drivers)
+docker compose up parakeet-rocm-gpu -d
 ```
 
-The server will be available at `http://localhost:5092`. See [DOCKER.md](docs/DOCKER.md) for more options.
+The server will be available at `http://localhost:5092`.
 
-**📚 Full Documentation**: See [docs/](docs/) for complete deployment guides, environment variables, and production setup.
+**📚 Full Documentation**:
+- [GPU Support Guide](docs/GPU_SUPPORT.md) - Multi-GPU support, auto-detection, troubleshooting
+- [Docker Guide](docs/DOCKER.md) - Docker deployment options
+- [docs/](docs/) - Complete deployment guides, environment variables, and production setup
 
 ---
 
