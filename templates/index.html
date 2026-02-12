@@ -555,6 +555,19 @@
             </div>
             <p class="subtitle">Next-gen speech transcription powered by AI. Real-time diarization and high-fidelity
                 output.</p>
+
+            <!-- API Key Input (optional) -->
+            <div style="max-width: 500px; margin: 1.5rem auto;">
+                <input type="password" id="apiKeyInput" placeholder="🔑 API Key (optional - leave empty if disabled)"
+                    style="width: 100%; padding: 12px 20px; background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 12px; color: white; font-size: 0.95rem; outline: none; transition: all 0.3s;"
+                    onchange="localStorage.setItem('parakeet_api_key', this.value)"
+                    onfocus="this.style.borderColor='rgb(34, 211, 238)'; this.style.boxShadow='0 0 0 3px rgba(34, 211, 238, 0.1)'"
+                    onblur="this.style.borderColor='rgba(100, 116, 139, 0.3)'; this.style.boxShadow='none'">
+                <script>
+                    // Load saved API key on page load
+                    document.getElementById('apiKeyInput').value = localStorage.getItem('parakeet_api_key') || '';
+                </script>
+            </div>
         </header>
 
         <div class="upload-section" id="uploadArea">
@@ -700,6 +713,9 @@
                 formData.append('file', file);
                 formData.append('response_format', 'verbose_json');
 
+                // Get API key from localStorage
+                const apiKey = localStorage.getItem('parakeet_api_key') || '';
+
                 // Start progress and metrics polling BEFORE the request
                 const progressInterval = setInterval(async () => {
                     try {
@@ -724,8 +740,14 @@
                 }, 300);
 
                 try {
+                    const headers = {};
+                    if (apiKey) {
+                        headers['Authorization'] = `Bearer ${apiKey}`;
+                    }
+
                     const response = await fetch('/v1/audio/transcriptions', {
                         method: 'POST',
+                        headers: headers,
                         body: formData
                     });
 

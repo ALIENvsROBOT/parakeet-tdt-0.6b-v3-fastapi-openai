@@ -1,7 +1,7 @@
 host = "0.0.0.0"
 port = 5092
 threads = None  # Will be auto-configured based on GPU/CPU detection
-CHUNK_MINUTE = 1.5  # Target 90-second chunks with intelligent silence-based splitting
+CHUNK_MINUTE = 3.0  # Target 3-minute chunks (GPU handles longer audio efficiently)
 
 # API Key Configuration (optional)
 # Set API_KEY environment variable to require authentication
