@@ -1,6 +1,6 @@
 host = "0.0.0.0"
 port = 5092
-threads = 8  # Optimized for 8 P-cores
+threads = None  # Will be auto-configured based on GPU/CPU detection
 CHUNK_MINUTE = 1.5  # Target 90-second chunks with intelligent silence-based splitting
 
 # API Key Configuration (optional)
@@ -66,18 +66,22 @@ try:
     if "ROCmExecutionProvider" in available_providers:
         providers_to_try.append("ROCmExecutionProvider")
         gpu_detected = "AMD ROCm"
+        threads = 2  # GPU mode: minimal threading overhead
         print("🎮 AMD GPU detected - using ROCm acceleration")
     elif "CUDAExecutionProvider" in available_providers:
         providers_to_try.append("CUDAExecutionProvider")
         gpu_detected = "NVIDIA CUDA"
+        threads = 2  # GPU mode: minimal threading overhead
         print("🎮 NVIDIA GPU detected - using CUDA acceleration")
     else:
+        threads = 8  # CPU mode: optimize for multi-core (8 P-cores)
         print("💻 No GPU detected - using CPU")
 
     # Always include CPU as fallback
     providers_to_try.append("CPUExecutionProvider")
 
     print(f"🚀 Provider priority: {' → '.join(providers_to_try)}")
+    print(f"⚙️  Waitress threads: {threads} (optimized for {gpu_detected or 'CPU'})")
 
     # Configure session options
     sess_options = ort.SessionOptions()
@@ -479,6 +483,8 @@ def transcribe_audio():
     # OpenAI compatible parameters
     model_name = request.form.get("model", "whisper-1").lower()
     response_format = request.form.get("response_format", "json")
+    language = request.form.get("language", None)  # OpenAI supports language hint
+    timestamp_granularities = request.form.getlist("timestamp_granularities[]") or []
 
     print(f"Request Model: {model_name} | Format: {response_format}")
 
@@ -712,30 +718,41 @@ def transcribe_audio():
             return Response(full_text, mimetype="text/plain")
 
         elif response_format == "verbose_json":
-            # Minimal verbose_json structure
-            return jsonify(
-                {
-                    "task": "transcribe",
-                    "language": "english",  # detection not implemented here, hardcoded or param?
-                    "duration": total_duration,
-                    "text": full_text,
-                    "segments": [
-                        {
-                            "id": idx,
-                            "seek": 0,
-                            "start": seg["start"],
-                            "end": seg["end"],
-                            "text": seg["segment"],
-                            "tokens": [],  # Populate if needed
-                            "temperature": 0.0,
-                            "avg_logprob": 0.0,
-                            "compression_ratio": 0.0,
-                            "no_speech_prob": 0.0,
-                        }
-                        for idx, seg in enumerate(all_segments)
-                    ],
-                }
-            )
+            # OpenAI-compatible verbose_json structure
+            response_data = {
+                "task": "transcribe",
+                "language": language if language else "auto",  # Language detection (Parakeet v3 auto-detects)
+                "duration": total_duration,
+                "text": full_text,
+                "segments": [
+                    {
+                        "id": idx,
+                        "seek": 0,
+                        "start": seg["start"],
+                        "end": seg["end"],
+                        "text": seg["segment"],
+                        "tokens": [],
+                        "temperature": 0.0,
+                        "avg_logprob": 0.0,
+                        "compression_ratio": 0.0,
+                        "no_speech_prob": 0.0,
+                    }
+                    for idx, seg in enumerate(all_segments)
+                ],
+            }
+
+            # Add words array if timestamp_granularities includes "word"
+            if "word" in timestamp_granularities:
+                response_data["words"] = [
+                    {
+                        "word": w["word"],
+                        "start": w["start"],
+                        "end": w["end"],
+                    }
+                    for w in all_words
+                ]
+
+            return jsonify(response_data)
 
         else:
             # Default JSON
